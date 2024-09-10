@@ -1,6 +1,13 @@
 <html>
 <head>
     <title>Scream Scaler</title>
+    <style>
+        /* Tambahkan sedikit style untuk progress bar */
+        progress {
+            width: 100%;
+            height: 30px;
+        }
+    </style>
 </head>
 <body>
     <h1>Scream Scaler</h1>
@@ -13,6 +20,10 @@
         <input type="hidden" id="scream_scale" name="scream_scale">
         <button type="submit">Submit</button>
     </form>
+
+    <!-- Indicator Scale Bar -->
+    <h3>Your Scream Intensity:</h3>
+    <progress id="screamBar" value="0" max="100"></progress>
 
     <!-- Tabel Leaderboard -->
     <h2>Leaderboard</h2>
@@ -55,6 +66,10 @@
         function drawLoop() {
             let screamScale = Math.round(meter.volume * 1000);
             document.getElementById('scream_scale').value = screamScale;
+
+            // Update progress bar
+            document.getElementById('screamBar').value = Math.min(screamScale, 100);
+
             requestAnimationFrame(drawLoop);
         }
 
