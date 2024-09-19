@@ -6,75 +6,122 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Scream Scaler</title>
     <style>
-        /* Style sederhana untuk progress bar dan countdown */
-        progress {
-            width: 100%;
-            height: 30px;
-        }
+    /* Style sederhana untuk progress bar dan countdown */
+    progress {
+        width: 100%;
+        height: 30px;
+    }
 
-        #countdown, #screamCountdown {
-            font-size: 48px;
-            font-weight: bold;
-            text-align: center;
-            margin-top: 20px;
-            color: #ff0000;
-        }
+    #countdown, #screamCountdown {
+        font-size: 48px;
+        font-weight: bold;
+        text-align: center;
+        margin-top: 20px;
+        color: #ff0000;
+    }
 
-        #screamBar {
-            margin-top: 20px;
-        }
+    #screamBar {
+        margin-top: 20px;
+    }
 
-        /* Sembunyikan elemen saat tidak diperlukan */
-        .hidden {
-            display: none;
-        }
+    /* Sembunyikan elemen saat tidak diperlukan */
+    .hidden {
+        display: none;
+    }
 
-        /* Style untuk notifikasi */
-        #notification {
-            display: none;
-            padding: 10px;
-            margin: 10px;
-            color: white;
-            background-color: red;
-            border-radius: 5px;
-            text-align: center;
-        }
-    </style>
-</head>
+    /* Style untuk notifikasi */
+    #notification {
+        display: none;
+        padding: 10px;
+        margin: 10px;
+        color: white;
+        background-color: red;
+        border-radius: 5px;
+        text-align: center;
+    }
+
+    /* Tambahkan background image dan buat konten di tengah */
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-image: url('https://img.freepik.com/free-vector/halloween-background-with-old-cemetery-gravestones-spooky-leafless-trees-full-moon-night-sky-realistic-illustration_1284-65419.jpg?w=1480&t=st=1726729371~exp=1726729971~hmac=517f2fd9ee52a9753ba7ca7e6a865fd77e1fe1fa5e8e8850e5b87830c24748bf'); /* Ganti dengan path ke gambar Anda */
+        background-size: cover;
+        background-position: center;
+        font-family: Arial, sans-serif;
+    }
+
+    /* Perbesar container dan beri padding */
+    .container {
+        width: 80%; /* Lebar container diatur menjadi 80% dari lebar layar */
+        max-width: 1200px; /* Maksimal lebar container agar tidak terlalu lebar di layar besar */
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 30px; /* Tambahkan padding agar konten lebih longgar */
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Tabel leaderboard lebih lebar dan estetis */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    table, th, td {
+        border: 1px solid #ddd;
+        padding: 12px; /* Lebih banyak padding agar terlihat lebih lega */
+    }
+
+    th {
+        background-color: #f2f2f2;
+        text-align: center;
+    }
+
+    td {
+        text-align: center;
+    }
+
+</style>
+
 <body>
-    <h1>Scream Scaler</h1>
-    
-    <!-- Form input nama -->
-    <input type="text" id="name" placeholder="Enter your name" required>
-    <button id="startCountdown" disabled>Start Screaming</button>
+<div class="container">
+        <h1>Scream Scaler</h1>
+        
+        <!-- Form input nama -->
+        <input type="text" id="name" placeholder="Enter your name" required>
+        <button id="startCountdown" disabled>Start Screaming</button>
 
-    <!-- Countdown Visual Sebelum Mulai -->
-    <div id="countdown" class="hidden">3</div>
+        <!-- Countdown Visual Sebelum Mulai -->
+        <div id="countdown" class="hidden">3</div>
 
-    <!-- Countdown untuk berteriak -->
-    <div id="screamCountdown" class="hidden">3</div>
+        <!-- Countdown untuk berteriak -->
+        <div id="screamCountdown" class="hidden">3</div>
 
-    <!-- Indicator Scale Bar untuk teriakan -->
-    <h3>Your Scream Intensity:</h3>
-    <progress id="screamBar" value="0" max="100"></progress>
+        <!-- Indicator Scale Bar untuk teriakan -->
+        <h3>Your Scream Intensity:</h3>
+        <progress id="screamBar" value="0" max="100"></progress>
 
-    <!-- Tabel Leaderboard -->
-    <h2>Leaderboard</h2>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Rank</th>
-                <th>Name</th>
-                <th>Scream Scale</th>
-            </tr>
-        </thead>
-        <tbody id="leaderboardBody">
-            <!-- Data leaderboard akan di-inject di sini -->
-        </tbody>
-    </table>
+        <!-- Tabel Leaderboard -->
+        <h2>Leaderboard</h2>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Name</th>
+                    <th>Scream Scale</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboardBody">
+                <!-- Data leaderboard akan di-inject di sini -->
+            </tbody>
+        </table>
 
-    <!-- Notifikasi Pop-up -->
-    <div id="notification">Name already exists in the leaderboard!</div>
+ <!-- Notifikasi Pop-up -->
+ <div id="notification">Name already exists in the leaderboard!</div>
 
     <script>
         let audioContext;
