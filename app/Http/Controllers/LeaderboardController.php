@@ -10,36 +10,53 @@ class LeaderboardController extends Controller
     /**
      * Display a listing of the resource.
      */
+
+     public function checkName(Request $request)
+{
+    $name = $request->input('name');
+
+    $exists = Leaderboard::where('name', $name)->exists();
+
+    return response()->json(['exists' => $exists]);
+}
+
     public function index()
     {
-        // Ambil data dari tabel leaderboard, urutkan berdasarkan scream_scale tertinggi dengan pagination
-        $leaderboards = Leaderboard::orderBy('scream_scale', 'desc')->paginate(10);
+       // Ambil data dari tabel leaderboard, urutkan berdasarkan scream_scale tertinggi dan batasi hingga 10
+       $leaderboards = Leaderboard::orderBy('scream_scale', 'desc')->take(10)->get();
 
-        // Kirim data ke view
-        return view('index', compact('leaderboards'));
+       // Kirim data ke view
+       return view('index', compact('leaderboards'));
     }
 
     /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-{
-    // Validasi input
-    $request->validate([
-        'name' => 'required',
-        'scream_scale' => 'required|integer',
-    ]);
+    {
+        $request->validate([
+            'name' => 'required',
+            'scream_scale' => 'required|integer',
+        ]);
 
-    // Simpan data teriakan ke dalam database
-    Leaderboard::create([
-        'name' => $request->name,
-        'scream_scale' => $request->scream_scale,
-    ]);
+        $screamScale = $request->scream_scale;
 
-    // Ambil data leaderboard terbaru yang sudah diurutkan
-    $leaderboards = Leaderboard::orderBy('scream_scale', 'desc')->get();
+        // Ambil 10 skor teratas
+        $topScores = Leaderboard::orderBy('scream_scale', 'desc')->take(10)->pluck('scream_scale');
 
-    // Kembalikan data dalam bentuk JSON untuk diupdate di frontend
-    return response()->json($leaderboards);
-}
+        // Cek apakah skor pengguna termasuk dalam 10 besar
+        if ($topScores->count() < 10 || $screamScale > $topScores->last()) {
+            Leaderboard::create([
+                'name' => $request->name,
+                'scream_scale' => $screamScale,
+            ]);
+
+            // Ambil data leaderboard setelah penambahan
+            $leaderboards = Leaderboard::orderBy('scream_scale', 'desc')->take(10)->get();
+
+            return response()->json($leaderboards);
+        } else {
+            return response()->json(['error' => 'Your scream score did not make it to the leaderboard.'], 400);
+        }
+    }   
 }

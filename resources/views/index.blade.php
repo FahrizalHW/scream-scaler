@@ -1,5 +1,9 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Scream Scaler</title>
     <style>
         /* Style sederhana untuk progress bar dan countdown */
@@ -23,6 +27,17 @@
         /* Sembunyikan elemen saat tidak diperlukan */
         .hidden {
             display: none;
+        }
+
+        /* Style untuk notifikasi */
+        #notification {
+            display: none;
+            padding: 10px;
+            margin: 10px;
+            color: white;
+            background-color: red;
+            border-radius: 5px;
+            text-align: center;
         }
     </style>
 </head>
@@ -48,7 +63,7 @@
     <table border="1">
         <thead>
             <tr>
-                <th>No</th>
+                <th>Rank</th>
                 <th>Name</th>
                 <th>Scream Scale</th>
             </tr>
@@ -58,27 +73,30 @@
         </tbody>
     </table>
 
+    <!-- Notifikasi Pop-up -->
+    <div id="notification">Name already exists in the leaderboard!</div>
+
     <script>
         let audioContext;
         let meter;
         let screamScale = 0;
-
+    
         const nameInput = document.getElementById('name');
         const startButton = document.getElementById('startCountdown');
         const countdownDiv = document.getElementById('countdown');
         const screamCountdownDiv = document.getElementById('screamCountdown');
         const screamBar = document.getElementById('screamBar');
-
+    
         // Hanya aktifkan tombol "Start Screaming" jika nama telah diisi
         nameInput.addEventListener('input', () => {
             startButton.disabled = !nameInput.value;
         });
-
+    
         // Proses Countdown sebelum mulai scream
         startButton.addEventListener('click', function() {
             startCountdown();
         });
-
+    
         function startCountdown() {
             let countdown = 3;
             countdownDiv.classList.remove('hidden');
@@ -92,27 +110,28 @@
                 }
             }, 1000);
         }
-
+    
         function startScreamProcess() {
             let screamTime = 3;
             screamScale = 0;
+            screamBar.value = 0; // Reset progress bar
             screamCountdownDiv.classList.remove('hidden');
-
+    
             // Aktifkan mikrofon
             navigator.mediaDevices.getUserMedia({ audio: true })
             .then(function(stream) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 let mediaStreamSource = audioContext.createMediaStreamSource(stream);
-
+    
                 meter = createAudioMeter(audioContext);
                 mediaStreamSource.connect(meter);
-
+    
                 // Update deteksi suara selama 3 detik
                 const screamInterval = setInterval(() => {
                     screamScale = Math.round(meter.volume * 1000);
                     screamBar.value = Math.min(screamScale, 100); // Update bar volume
                 }, 100);
-
+    
                 // Countdown untuk durasi teriakan
                 const screamCountdownInterval = setInterval(() => {
                     screamCountdownDiv.textContent = screamTime;
@@ -126,7 +145,7 @@
                 }, 1000);
             });
         }
-
+    
         // Buat deteksi audio (audio meter)
         function createAudioMeter(audioContext) {
             let processor = audioContext.createScriptProcessor(512);
@@ -141,30 +160,39 @@
             processor.connect(audioContext.destination);
             return processor;
         }
-
+    
         // Kirim hasil score secara otomatis ke server
         function submitScreamScore() {
             const name = nameInput.value;
             if (!name || screamScale === 0) return;
-
+    
             fetch('/leaderboard', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
                 body: JSON.stringify({ name: name, scream_scale: screamScale })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    return response.json().then(data => { throw new Error(data.error); });
+                }
+            })
             .then(data => {
                 alert('Score successfully submitted!');
                 updateLeaderboard(data); // Update leaderboard di client
             })
             .catch(error => {
-                console.error('Error:', error);
+                alert(error.message); // Menampilkan notifikasi jika skor tidak masuk leaderboard
             });
+    
+            // Reset progress bar setelah submit
+            screamBar.value = 0;
         }
-
+    
         // Update leaderboard di halaman tanpa reload
         function updateLeaderboard(data) {
             const leaderboardBody = document.getElementById('leaderboardBody');
@@ -179,5 +207,7 @@
             });
         }
     </script>
+    
+
 </body>
 </html>
