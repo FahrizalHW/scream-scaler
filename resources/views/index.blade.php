@@ -6,6 +6,47 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Scream Scaler</title>
     <style>
+
+    /* Popup Styles */
+    .popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .popup-content {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 5px;
+        text-align: center;
+        width: 300px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .popup-content p {
+        margin: 0;
+        font-size: 18px;
+    }
+
+    .close-button {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 18px;
+        cursor: pointer;
+    }
+
+    .hidden {
+        display: none;
+    }
+
     /* Style sederhana untuk progress bar dan countdown */
     progress {
         width: 100%;
@@ -20,51 +61,75 @@
         color: #ff0000;
     }
 
+    /* Style for the scream bar resembling a vertical scream canister */
+    #screamBarContainer {
+        width: 40px;  
+        height: 300px; 
+        border-radius: 20px;
+        background: linear-gradient(180deg, #e0e0e0, #b0b0b0); 
+        border: 3px solid #5c5c5c;
+        box-shadow: inset 0px 2px 6px rgba(0, 0, 0, 0.3); 
+        position: relative;
+        overflow: hidden;
+        margin: 20px auto; 
+    }
+
+    /* Hide the default progress element */
     #screamBar {
-        margin-top: 20px;
-    }
-
-    /* Sembunyikan elemen saat tidak diperlukan */
-    .hidden {
         display: none;
     }
 
-    /* Style untuk notifikasi */
-    #notification {
-        display: none;
-        padding: 10px;
-        margin: 10px;
-        color: white;
-        background-color: red;
-        border-radius: 5px;
-        text-align: center;
+    /* Custom vertical bar fill */
+    #screamFill {
+        width: 100%;
+        height: 0;  
+        background-color: #4CAF50; 
+        transition: height 0.3s ease;
+        position: absolute;
+        bottom: 0;
     }
 
-    /* Tambahkan background image dan buat konten di tengah */
+    /* Optional: Light effect moving across the bar */
+    #screamBarContainer::before {
+        content: '';
+        position: absolute;
+        top: 10px;
+        bottom: 10px;
+        left: 0;
+        right: 0;
+        background: radial-gradient(circle, rgba(255,255,255,0.5), transparent);
+        animation: moveLightVertical 2s infinite;
+    }
+
+    @keyframes moveLightVertical {
+        0% { top: -20px; }
+        100% { top: 100%; }
+    }
+
+    /* Container and layout settings */
     body {
         display: flex;
         justify-content: center;
         align-items: center;
         height: 100vh;
         margin: 0;
-        background-image: url('https://img.freepik.com/free-vector/halloween-background-with-old-cemetery-gravestones-spooky-leafless-trees-full-moon-night-sky-realistic-illustration_1284-65419.jpg?w=1480&t=st=1726729371~exp=1726729971~hmac=517f2fd9ee52a9753ba7ca7e6a865fd77e1fe1fa5e8e8850e5b87830c24748bf'); /* Ganti dengan path ke gambar Anda */
+        background-image: url('https://img.freepik.com/free-vector/halloween-background-with-old-cemetery-gravestones-spooky-leafless-trees-full-moon-night-sky-realistic-illustration_1284-65419.jpg?w=1480&t=st=1726729371~exp=1726729971~hmac=517f2fd9ee52a9753ba7ca7e6a865fd77e1fe1fa5e8e8850e5b87830c24748bf');
         background-size: cover;
         background-position: center;
         font-family: Arial, sans-serif;
     }
 
-    /* Perbesar container dan beri padding */
     .container {
-        width: 80%; /* Lebar container diatur menjadi 80% dari lebar layar */
-        max-width: 1200px; /* Maksimal lebar container agar tidak terlalu lebar di layar besar */
+        width: 80%; 
+        max-width: 1200px;
         background-color: rgba(255, 255, 255, 0.8);
-        padding: 30px; /* Tambahkan padding agar konten lebih longgar */
+        padding: 30px;
         border-radius: 10px;
         text-align: center;
         box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
     }
 
-    /* Tabel leaderboard lebih lebar dan estetis */
+    /* Leaderboard table */
     table {
         width: 100%;
         border-collapse: collapse;
@@ -73,7 +138,7 @@
 
     table, th, td {
         border: 1px solid #ddd;
-        padding: 12px; /* Lebih banyak padding agar terlihat lebih lega */
+        padding: 12px;
     }
 
     th {
@@ -84,8 +149,8 @@
     td {
         text-align: center;
     }
-
-</style>
+    </style>
+</head>
 
 <body>
 <div class="container">
@@ -95,15 +160,25 @@
         <input type="text" id="name" placeholder="Enter your name" required>
         <button id="startCountdown" disabled>Start Screaming</button>
 
+    <!-- Popup Styles -->
+    <div id="popupNotification" class="popup hidden">
+        <div class="popup-content">
+            <span class="close-button">&times;</span>
+            <p>Your scream was not loud enough to make it to the leaderboard. Try again!</p>
+        </div>
+    </div>
+
         <!-- Countdown Visual Sebelum Mulai -->
         <div id="countdown" class="hidden">3</div>
 
         <!-- Countdown untuk berteriak -->
         <div id="screamCountdown" class="hidden">3</div>
 
-        <!-- Indicator Scale Bar untuk teriakan -->
+        <!-- Indicator Scale Bar for Scream Intensity (Vertical) -->
         <h3>Your Scream Intensity:</h3>
-        <progress id="screamBar" value="0" max="100"></progress>
+        <div id="screamBarContainer">
+            <div id="screamFill"></div> <!-- This div will act as the progress fill -->
+        </div>
 
         <!-- Tabel Leaderboard -->
         <h2>Leaderboard</h2>
@@ -119,9 +194,7 @@
                 <!-- Data leaderboard akan di-inject di sini -->
             </tbody>
         </table>
-
- <!-- Notifikasi Pop-up -->
- <div id="notification">Name already exists in the leaderboard!</div>
+    </div>
 
     <script>
         let audioContext;
@@ -132,7 +205,7 @@
         const startButton = document.getElementById('startCountdown');
         const countdownDiv = document.getElementById('countdown');
         const screamCountdownDiv = document.getElementById('screamCountdown');
-        const screamBar = document.getElementById('screamBar');
+        const screamFill = document.getElementById('screamFill');
     
         // Hanya aktifkan tombol "Start Screaming" jika nama telah diisi
         nameInput.addEventListener('input', () => {
@@ -158,58 +231,59 @@
             }, 1000);
         }
     
-        function startScreamProcess() {
-            let screamTime = 3;
-            screamScale = 0;
-            screamBar.value = 0; // Reset progress bar
-            screamCountdownDiv.classList.remove('hidden');
-    
-            // Aktifkan mikrofon
-            navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(function(stream) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                let mediaStreamSource = audioContext.createMediaStreamSource(stream);
-    
-                meter = createAudioMeter(audioContext);
-                mediaStreamSource.connect(meter);
-    
-                // Update deteksi suara selama 3 detik
-                const screamInterval = setInterval(() => {
-                    screamScale = Math.round(meter.volume * 1000);
-                    screamBar.value = Math.min(screamScale, 100); // Update bar volume
-                }, 100);
-    
-                // Countdown untuk durasi teriakan
-                const screamCountdownInterval = setInterval(() => {
-                    screamCountdownDiv.textContent = screamTime;
-                    screamTime--;
-                    if (screamTime < 0) {
-                        clearInterval(screamCountdownInterval);
-                        clearInterval(screamInterval);
-                        screamCountdownDiv.classList.add('hidden');
-                        submitScreamScore(); // Kirim score setelah waktu habis
-                    }
-                }, 1000);
-            });
-        }
-    
-        // Buat deteksi audio (audio meter)
-        function createAudioMeter(audioContext) {
-            let processor = audioContext.createScriptProcessor(512);
-            processor.onaudioprocess = function(event) {
-                let input = event.inputBuffer.getChannelData(0);
-                let sum = 0.0;
-                for (let i = 0; i < input.length; ++i) {
-                    sum += input[i] * input[i];
+        let maxScreamScale = 0; // Variable to store the maximum scream scale
+
+function startScreamProcess() {
+    let screamTime = 3;
+    screamScale = 0; // Reset scream scale
+    maxScreamScale = 0; // Reset the maximum scream scale
+    screamFill.style.height = '0%'; // Reset bar fill
+    screamCountdownDiv.classList.remove('hidden');
+
+    // Activate the microphone
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(function (stream) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            let mediaStreamSource = audioContext.createMediaStreamSource(stream);
+
+            meter = createAudioMeter(audioContext);
+            mediaStreamSource.connect(meter);
+
+            // Update scream detection for 3 seconds
+            const screamInterval = setInterval(() => {
+                screamScale = Math.round(meter.volume * 1000);
+
+                // Store the maximum scream scale reached
+                if (screamScale > maxScreamScale) {
+                    maxScreamScale = screamScale;
                 }
-                meter.volume = Math.sqrt(sum / input.length);
-            };
-            processor.connect(audioContext.destination);
-            return processor;
-        }
+
+                // Convert maxScreamScale to a percentage of 500 points (maximum intensity)
+                let barFillPercentage = Math.min((maxScreamScale / 500) * 100, 100);
+                
+                // Update the vertical fill bar based on the maximum percentage
+                screamFill.style.height = barFillPercentage + '%';
+
+            }, 100);
+
+            // Countdown for the scream duration
+            const screamCountdownInterval = setInterval(() => {
+                screamCountdownDiv.textContent = screamTime;
+                screamTime--;
+                if (screamTime < 0) {
+                    clearInterval(screamCountdownInterval);
+                    clearInterval(screamInterval);
+                    screamCountdownDiv.classList.add('hidden');
+                    submitScreamScore(); // Submit the score when the scream ends
+                }
+            }, 1000);
+        })
+        .catch(function (err) {
+            console.error("Error accessing microphone:", err);
+        });
+}
     
-        // Kirim hasil score secara otomatis ke server
-        function submitScreamScore() {
+function submitScreamScore() {
             const name = nameInput.value;
             if (!name || screamScale === 0) return;
     
@@ -239,8 +313,7 @@
             // Reset progress bar setelah submit
             screamBar.value = 0;
         }
-    
-        // Update leaderboard di halaman tanpa reload
+
         function updateLeaderboard(data) {
             const leaderboardBody = document.getElementById('leaderboardBody');
             leaderboardBody.innerHTML = '';
@@ -253,8 +326,92 @@
                 leaderboardBody.innerHTML += row;
             });
         }
-    </script>
-    
 
+
+
+    
+        function addScoreToLeaderboard(name, score) {
+            const leaderboardBody = document.getElementById('leaderboardBody');
+            const newRow = document.createElement('tr');
+            const rankCell = document.createElement('td');
+            const nameCell = document.createElement('td');
+            const scoreCell = document.createElement('td');
+    
+            rankCell.textContent = leaderboardBody.children.length + 1;
+            nameCell.textContent = name;
+            scoreCell.textContent = score;
+    
+            newRow.appendChild(rankCell);
+            newRow.appendChild(nameCell);
+            newRow.appendChild(scoreCell);
+    
+            leaderboardBody.appendChild(newRow);
+        }
+    
+        // Function to show the popup notification
+        function showPopupNotification() {
+            const popup = document.getElementById('popupNotification');
+            popup.classList.remove('hidden');
+        }
+
+        // Close the popup when close button is clicked
+        document.querySelector('.close-button').addEventListener('click', () => {
+            document.getElementById('popupNotification').classList.add('hidden');
+        });
+
+        // Close the popup when clicking outside the popup content
+        const popup = document.getElementById('popupNotification');
+        popup.addEventListener('click', function(event) {
+            if (event.target === popup) {
+                popup.classList.add('hidden');
+            }
+        });
+
+        // Audio meter function from Chris Wilson's example: https://webaudiodemos.appspot.com/AudioRecorder/index.html
+        function createAudioMeter(audioContext, clipLevel = 0.98, averaging = 0.95, clipLag = 750) {
+            const processor = audioContext.createScriptProcessor(512);
+            processor.onaudioprocess = volumeAudioProcess;
+            processor.clipping = false;
+            processor.lastClip = 0;
+            processor.volume = 0;
+            processor.clipLevel = clipLevel;
+            processor.averaging = averaging;
+            processor.clipLag = clipLag;
+    
+            processor.connect(audioContext.destination);
+    
+            processor.checkClipping = function () {
+                if (!this.clipping) return false;
+                if ((this.lastClip + this.clipLag) < window.performance.now()) this.clipping = false;
+                return this.clipping;
+            };
+    
+            processor.shutdown = function () {
+                this.disconnect();
+                this.onaudioprocess = null;
+            };
+    
+            return processor;
+        }
+    
+        function volumeAudioProcess(event) {
+            const buf = event.inputBuffer.getChannelData(0);
+            let sum = 0;
+            let x;
+    
+            for (let i = 0; i < buf.length; i++) {
+                x = buf[i];
+                sum += x * x;
+            }
+    
+            const rms = Math.sqrt(sum / buf.length);
+            this.volume = Math.max(rms, this.volume * this.averaging);
+    
+            if (this.volume > this.clipLevel) {
+                this.clipping = true;
+                this.lastClip = window.performance.now();
+            }
+        }
+    </script>
 </body>
 </html>
