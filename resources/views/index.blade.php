@@ -197,221 +197,189 @@
     </div>
 
     <script>
-        let audioContext;
-        let meter;
-        let screamScale = 0;
-    
-        const nameInput = document.getElementById('name');
-        const startButton = document.getElementById('startCountdown');
-        const countdownDiv = document.getElementById('countdown');
-        const screamCountdownDiv = document.getElementById('screamCountdown');
-        const screamFill = document.getElementById('screamFill');
-    
-        // Hanya aktifkan tombol "Start Screaming" jika nama telah diisi
-        nameInput.addEventListener('input', () => {
-            startButton.disabled = !nameInput.value;
-        });
-    
-        // Proses Countdown sebelum mulai scream
-        startButton.addEventListener('click', function() {
-            startCountdown();
-        });
-    
-        function startCountdown() {
-            let countdown = 3;
-            countdownDiv.classList.remove('hidden');
-            const countdownInterval = setInterval(() => {
-                countdownDiv.textContent = countdown;
-                countdown--;
-                if (countdown < 0) {
-                    clearInterval(countdownInterval);
-                    countdownDiv.classList.add('hidden');
-                    startScreamProcess();
-                }
-            }, 1000);
+    let audioContext;
+    let meter;
+    let screamScale = 0;
+
+    const nameInput = document.getElementById('name');
+    const startButton = document.getElementById('startCountdown');
+    const countdownDiv = document.getElementById('countdown');
+    const screamCountdownDiv = document.getElementById('screamCountdown');
+    const screamFill = document.getElementById('screamFill');
+
+    // Hanya aktifkan tombol "Start Screaming" jika nama telah diisi
+    nameInput.addEventListener('input', () => {
+        startButton.disabled = !nameInput.value;
+    });
+
+    // Proses Countdown sebelum mulai scream
+    startButton.addEventListener('click', function() {
+        startCountdown();
+    });
+
+    function startCountdown() {
+        let countdown = 3;
+        countdownDiv.classList.remove('hidden');
+        const countdownInterval = setInterval(() => {
+            countdownDiv.textContent = countdown;
+            countdown--;
+            if (countdown < 0) {
+                clearInterval(countdownInterval);
+                countdownDiv.classList.add('hidden');
+                startScreamProcess();
+            }
+        }, 1000);
+    }
+
+    let maxScreamScale = 0; // Variable to store the maximum scream scale
+
+    function startScreamProcess() {
+        let screamTime = 3;
+        screamScale = 0; // Reset scream scale
+        maxScreamScale = 0; // Reset the maximum scream scale
+        screamFill.style.height = '0%'; // Reset bar fill
+        screamCountdownDiv.classList.remove('hidden');
+
+        // Activate the microphone
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(function (stream) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                let mediaStreamSource = audioContext.createMediaStreamSource(stream);
+
+                meter = createAudioMeter(audioContext, 0.99, 0.9); // Adjust clipLevel and averaging
+                mediaStreamSource.connect(meter);
+
+                // Update scream detection for 3 seconds
+                const screamInterval = setInterval(() => {
+                    // Hanya hitung volume jika lebih besar dari threshold
+                    const minThreshold = 0.02; // Threshold minimum suara
+                    screamScale = meter.volume > minThreshold ? Math.round(meter.volume * 1000) : 0;
+
+                    // Store the maximum scream scale reached
+                    if (screamScale > maxScreamScale) {
+                        maxScreamScale = screamScale;
+                    }
+
+                    // Convert maxScreamScale to a percentage of 500 points (maximum intensity)
+                    let barFillPercentage = Math.min((maxScreamScale / 500) * 100, 100);
+                    screamFill.style.height = barFillPercentage + '%';
+
+                }, 100);
+
+                // Countdown for the scream duration
+                const screamCountdownInterval = setInterval(() => {
+                    screamCountdownDiv.textContent = screamTime;
+                    screamTime--;
+                    if (screamTime < 0) {
+                        clearInterval(screamCountdownInterval);
+                        clearInterval(screamInterval);
+                        screamCountdownDiv.classList.add('hidden');
+                        submitScreamScore(); // Submit the score when the scream ends
+                    }
+                }, 1000);
+            })
+            .catch(function (err) {
+                console.error("Error accessing microphone:", err);
+            });
+    }
+
+    function submitScreamScore() {
+        const name = nameInput.value;
+
+        // Jika nama kosong atau maxScreamScale kurang dari 100, tidak akan diproses
+        if (!name || maxScreamScale < 100) {
+            alert('Skor kamu kurang dari 100 atau nama belum diisi. Skor tidak akan disimpan.');
+            return;
         }
-    
-        let maxScreamScale = 0; // Variable to store the maximum scream scale
 
-function startScreamProcess() {
-    let screamTime = 3;
-    screamScale = 0; // Reset scream scale
-    maxScreamScale = 0; // Reset the maximum scream scale
-    screamFill.style.height = '0%'; // Reset bar fill
-    screamCountdownDiv.classList.remove('hidden');
-
-    // Activate the microphone
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(function (stream) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            let mediaStreamSource = audioContext.createMediaStreamSource(stream);
-
-            meter = createAudioMeter(audioContext);
-            mediaStreamSource.connect(meter);
-
-            // Update scream detection for 3 seconds
-            const screamInterval = setInterval(() => {
-                screamScale = Math.round(meter.volume * 1000);
-
-                // Store the maximum scream scale reached
-                if (screamScale > maxScreamScale) {
-                    maxScreamScale = screamScale;
-                }
-
-                // Convert maxScreamScale to a percentage of 500 points (maximum intensity)
-                let barFillPercentage = Math.min((maxScreamScale / 500) * 100, 100);
-                
-                // Update the vertical fill bar based on the maximum percentage
-                screamFill.style.height = barFillPercentage + '%';
-
-            }, 100);
-
-            // Countdown for the scream duration
-            const screamCountdownInterval = setInterval(() => {
-                screamCountdownDiv.textContent = screamTime;
-                screamTime--;
-                if (screamTime < 0) {
-                    clearInterval(screamCountdownInterval);
-                    clearInterval(screamInterval);
-                    screamCountdownDiv.classList.add('hidden');
-                    submitScreamScore(); // Submit the score when the scream ends
-                }
-            }, 1000);
+        fetch('/leaderboard', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ name: name, scream_scale: maxScreamScale }) // Kirim maxScreamScale
         })
-        .catch(function (err) {
-            console.error("Error accessing microphone:", err);
-        });
-}
-    
-function submitScreamScore() {
-            const name = nameInput.value;
-            if (!name || screamScale === 0) return;
-    
-            fetch('/leaderboard', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({ name: name, scream_scale: screamScale })
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    return response.json().then(data => { throw new Error(data.error); });
-                }
-            })
-            .then(data => {
-                alert('Score successfully submitted!');
-                updateLeaderboard(data); // Update leaderboard di client
-            })
-            .catch(error => {
-                alert(error.message); // Menampilkan notifikasi jika skor tidak masuk leaderboard
-            });
-    
-            // Reset progress bar setelah submit
-            screamBar.value = 0;
-        }
-
-        function updateLeaderboard(data) {
-            const leaderboardBody = document.getElementById('leaderboardBody');
-            leaderboardBody.innerHTML = '';
-            data.forEach((item, index) => {
-                const row = `<tr>
-                    <td>${index + 1}</td>
-                    <td>${item.name}</td>
-                    <td>${item.scream_scale}</td>
-                </tr>`;
-                leaderboardBody.innerHTML += row;
-            });
-        }
-
-
-
-    
-        function addScoreToLeaderboard(name, score) {
-            const leaderboardBody = document.getElementById('leaderboardBody');
-            const newRow = document.createElement('tr');
-            const rankCell = document.createElement('td');
-            const nameCell = document.createElement('td');
-            const scoreCell = document.createElement('td');
-    
-            rankCell.textContent = leaderboardBody.children.length + 1;
-            nameCell.textContent = name;
-            scoreCell.textContent = score;
-    
-            newRow.appendChild(rankCell);
-            newRow.appendChild(nameCell);
-            newRow.appendChild(scoreCell);
-    
-            leaderboardBody.appendChild(newRow);
-        }
-    
-        // Function to show the popup notification
-        function showPopupNotification() {
-            const popup = document.getElementById('popupNotification');
-            popup.classList.remove('hidden');
-        }
-
-        // Close the popup when close button is clicked
-        document.querySelector('.close-button').addEventListener('click', () => {
-            document.getElementById('popupNotification').classList.add('hidden');
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                return response.json().then(data => { throw new Error(data.error); });
+            }
+        })
+        .then(data => {
+            alert('Skor berhasil disubmit!');
+            updateLeaderboard(data); // Update leaderboard di client
+        })
+        .catch(error => {
+            alert(error.message); // Menampilkan notifikasi jika skor tidak masuk leaderboard
         });
 
-        // Close the popup when clicking outside the popup content
-        const popup = document.getElementById('popupNotification');
-        popup.addEventListener('click', function(event) {
-            if (event.target === popup) {
-                popup.classList.add('hidden');
-            }
-        });
+        // Reset progress bar setelah submit
+        screamFill.style.height = '0%';
+    }
 
-        // Audio meter function from Chris Wilson's example: https://webaudiodemos.appspot.com/AudioRecorder/index.html
-        function createAudioMeter(audioContext, clipLevel = 0.98, averaging = 0.95, clipLag = 750) {
-            const processor = audioContext.createScriptProcessor(512);
-            processor.onaudioprocess = volumeAudioProcess;
-            processor.clipping = false;
-            processor.lastClip = 0;
-            processor.volume = 0;
-            processor.clipLevel = clipLevel;
-            processor.averaging = averaging;
-            processor.clipLag = clipLag;
-    
-            processor.connect(audioContext.destination);
-    
-            processor.checkClipping = function () {
-                if (!this.clipping) return false;
-                if ((this.lastClip + this.clipLag) < window.performance.now()) this.clipping = false;
-                return this.clipping;
-            };
-    
-            processor.shutdown = function () {
-                this.disconnect();
-                this.onaudioprocess = null;
-            };
-    
-            return processor;
+    function updateLeaderboard(data) {
+        const leaderboardBody = document.getElementById('leaderboardBody');
+        leaderboardBody.innerHTML = '';
+        data.forEach((item, index) => {
+            const row = `<tr>
+                <td>${index + 1}</td>
+                <td>${item.name}</td>
+                <td>${item.scream_scale}</td>
+            </tr>`;
+            leaderboardBody.innerHTML += row;
+        });
+    }
+
+    // Audio meter function dari Chris Wilson
+    function createAudioMeter(audioContext, clipLevel = 0.98, averaging = 0.95, clipLag = 750) {
+        const processor = audioContext.createScriptProcessor(512);
+        processor.onaudioprocess = volumeAudioProcess;
+        processor.clipping = false;
+        processor.lastClip = 0;
+        processor.volume = 0;
+        processor.clipLevel = clipLevel;
+        processor.averaging = averaging;
+        processor.clipLag = clipLag;
+
+        processor.connect(audioContext.destination);
+
+        processor.checkClipping = function () {
+            if (!this.clipping) return false;
+            if ((this.lastClip + this.clipLag) < window.performance.now()) this.clipping = false;
+            return this.clipping;
+        };
+
+        processor.shutdown = function () {
+            this.disconnect();
+            this.onaudioprocess = null;
+        };
+
+        return processor;
+    }
+
+    function volumeAudioProcess(event) {
+        const buf = event.inputBuffer.getChannelData(0);
+        let sum = 0;
+        let x;
+
+        for (let i = 0; i < buf.length; i++) {
+            x = buf[i];
+            sum += x * x;
         }
-    
-        function volumeAudioProcess(event) {
-            const buf = event.inputBuffer.getChannelData(0);
-            let sum = 0;
-            let x;
-    
-            for (let i = 0; i < buf.length; i++) {
-                x = buf[i];
-                sum += x * x;
-            }
-    
-            const rms = Math.sqrt(sum / buf.length);
-            this.volume = Math.max(rms, this.volume * this.averaging);
-    
-            if (this.volume > this.clipLevel) {
-                this.clipping = true;
-                this.lastClip = window.performance.now();
-            }
+
+        const rms = Math.sqrt(sum / buf.length);
+
+        // Kurangi sensitivitas dengan mengurangi skala volume
+        const sensitivityFactor = 0.3; // Sesuaikan nilai untuk mengurangi sensitivitas
+        this.volume = Math.max(rms * sensitivityFactor, this.volume * this.averaging);
+
+        if (this.volume > this.clipLevel) {
+            this.clipping = true;
+            this.lastClip = window.performance.now();
         }
-    </script>
+    }
+</script>
 </body>
 </html>
